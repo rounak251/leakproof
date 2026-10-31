@@ -34,7 +34,7 @@ randomness. Also in the web app ("Check code") and the API (`POST /api/v1/lint`)
 ## Quick start (CLI, free, nothing leaves your machine)
 
 ```bash
-pip install leakproof-audit
+pip install "git+https://github.com/rounak251/leakproof"
 leakproof demo                                   # writes a planted-leak dataset
 leakproof audit leakproof_demo/train.csv --test leakproof_demo/test.csv --target churned --html report.html
 leakproof gate  train.csv --target y --min-score 80 --fail-on critical   # exit 1 → fails CI

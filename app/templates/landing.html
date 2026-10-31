@@ -492,7 +492,7 @@
           <p class="hero-note">3 free audits / month <span aria-hidden="true">·</span> Unlimited local CLI</p>
           <div class="install-command">
             <span class="prompt mono" aria-hidden="true">$</span>
-            <code id="install-command">pip install leakproof-audit</code>
+            <code id="install-command">pip install "git+https://github.com/rounak251/leakproof"</code>
             <button class="copy-button" type="button" data-copy-target="install-command" aria-label="Copy installation command"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span class="copy-label">Copy</span></button>
           </div>
         </div>
@@ -622,7 +622,7 @@ cv = GroupKFold(5).split(X, y, groups=customer_id)</code></pre>
         </div>
         <div class="terminal" aria-label="Leakproof CLI example">
           <div class="terminal-bar"><span class="terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="terminal-title">leakproof — local audit</span><span class="terminal-local">YOUR MACHINE</span></div>
-          <pre><code><span class="prompt">$</span> pip install leakproof-audit
+          <pre><code><span class="prompt">$</span> pip install "git+https://github.com/rounak251/leakproof"
 <span class="prompt">$</span> leakproof audit train.csv --test test.csv --target churned
 
 <span class="output">Leakproof score <span class="terminal-warning">11/100 (F)</span>  ·  4 critical  ·  3 medium</span>
@@ -769,7 +769,7 @@ report = audit(train, test, AuditConfig(target="y"))</code></pre>
           </article>
           <article class="doc-card">
             <div class="doc-header"><h3><svg class="icon" aria-hidden="true"><use href="#i-terminal"/></svg>CLI</h3><button class="copy-button" type="button" data-copy-target="docs-cli" aria-label="Copy CLI example"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span class="copy-label">Copy</span></button></div>
-            <pre><code id="docs-cli">pip install leakproof-audit
+            <pre><code id="docs-cli">pip install "git+https://github.com/rounak251/leakproof"
 leakproof audit train.csv --test test.csv --target y</code></pre>
           </article>
           <article class="doc-card">
@@ -780,7 +780,7 @@ leakproof audit train.csv --test test.csv --target y</code></pre>
             <div class="doc-header"><h3><svg class="icon" aria-hidden="true"><use href="#i-workflow"/></svg>GitHub Action</h3><button class="copy-button" type="button" data-copy-target="docs-action" aria-label="Copy GitHub Action steps"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span class="copy-label">Copy</span></button></div>
             <pre><code id="docs-action"><span class="doc-comment"># Add to an existing job with your data checked out</span>
 steps:
-  - run: pip install leakproof-audit
+  - run: pip install "git+https://github.com/rounak251/leakproof"
   - run: leakproof gate data/train.csv --target y --min-score 80</code></pre>
           </article>
         </div>
@@ -807,7 +807,7 @@ steps:
         <h2 class="section-title" id="final-title">Build on data you can trust.</h2>
         <p>Find the problem while it's still a dataset.</p>
         <a class="button button-primary" href="/signup">Audit a dataset free <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        <p class="final-cli">Or start locally: <a href="#cli"><code>pip install leakproof-audit</code></a></p>
+        <p class="final-cli">Or start locally: <a href="#cli"><code>pip install "git+https://github.com/rounak251/leakproof"</code></a></p>
       </div>
     </section>
   </main>

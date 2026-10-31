@@ -57,7 +57,7 @@
 <div class="mt-10 grid gap-4 md:grid-cols-2">
   <div class="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
     <div class="text-sm font-semibold text-zinc-200">Prefer the terminal?</div>
-    <pre class="lp-code mt-3"><code>pip install leakproof-audit
+    <pre class="lp-code mt-3"><code>pip install "git+https://github.com/rounak251/leakproof"
 leakproof audit train.csv --test test.csv --target {{ audits[0].target if audits else 'y' }}
 leakproof gate  train.csv --target y --min-score 80   # CI: exit 1 on failure</code></pre>
   </div>

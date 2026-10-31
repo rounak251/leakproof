@@ -10,5 +10,5 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: pip install leakproof-audit
+      - run: pip install "git+https://github.com/rounak251/leakproof"
       - run: leakproof lint $(git ls-files '*.py' '*.ipynb') --fail-on error --no-repro
