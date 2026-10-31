@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }} · Leakproof report</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { background:#09090b; color:#e4e4e7; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif; }
+  .lp-code { background:#0c0c0f; border:1px solid #27272a; border-radius:.6rem; padding:.75rem .9rem; font-size:12.5px; line-height:1.5; overflow:auto; color:#d4d4d8; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space:pre; }
+  .lp-table { width:100%; font-size:12.5px; border-collapse:collapse; }
+  .lp-table th { text-align:left; color:#71717a; font-weight:500; padding:.35rem .5rem; border-bottom:1px solid #27272a; }
+  .lp-table td { padding:.35rem .5rem; border-bottom:1px solid #18181b; color:#a1a1aa; vertical-align:top; }
+  details > summary::-webkit-details-marker { display:none; }
+  @media print { body { background:#fff; color:#111; } .lp-code { background:#f4f4f5; color:#111; } }
+</style>
+</head>
+<body>
+<main class="mx-auto max-w-6xl px-4 py-8 md:py-12">
+  <div class="mb-6 flex items-center justify-between text-xs text-zinc-500">
+    <div class="flex items-center gap-2"><span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span><span class="font-semibold text-zinc-300">Leakproof</span> · {{ title }}</div>
+    <div>leakproof.dev</div>
+  </div>
+  {% include "report_body.html" %}
+</main>
+</body>
+</html>

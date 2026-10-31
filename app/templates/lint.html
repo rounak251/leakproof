@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Check training code · Leakproof{% endblock %}
+{% block content %}
+{% set sev = {'ERROR': 'bg-red-500/15 text-red-300 ring-red-500/30', 'WARN': 'bg-amber-400/15 text-amber-200 ring-amber-400/30', 'INFO': 'bg-zinc-500/15 text-zinc-300 ring-zinc-500/30'} %}
+<div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+  <div>
+    <h1 class="text-2xl font-semibold text-zinc-50">Check training code for test-set leakage</h1>
+    <p class="mt-1 text-sm text-zinc-400">Paste a script or upload a .py / .ipynb. Leakproof follows every value from train.csv and test.csv
+      through your code and checks each fit: scalers, PCA, vocabularies, clustering, imputation and training loops. Nothing is executed or stored.</p>
+    {% if error %}<div class="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">{{ error }}</div>{% endif %}
+    <form method="post" enctype="multipart/form-data" class="mt-5 space-y-4">
+      <textarea name="code" rows="20" class="input font-mono text-xs leading-relaxed" placeholder="import pandas as pd&#10;train = pd.read_csv('train.csv')&#10;test = pd.read_csv('test.csv')&#10;...">{{ code }}</textarea>
+      <div class="flex flex-wrap items-center gap-3">
+        <input type="file" name="file" accept=".py,.ipynb" class="text-sm text-zinc-400 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-800 file:px-3 file:py-1 file:text-zinc-200">
+        <button class="btn btn-primary" type="submit">Check code</button>
+      </div>
+    </form>
+    <pre class="lp-code mt-6"><code>pip install leakproof-audit
+leakproof lint train.py notebook.ipynb --fail-on error   # exit 1 in CI when a fit sees test rows</code></pre>
+  </div>
+  <div>
+    {% if report %}
+    <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+      <div class="text-sm text-zinc-400">{{ filename }}</div>
+      <div class="mt-1 text-xl font-semibold {{ 'text-red-300' if report.errors else ('text-amber-200' if report.warnings else 'text-emerald-300') }}">
+        {% if report.errors %}{{ report.errors|length }} leak{{ 's' if report.errors|length > 1 }} found{% elif report.warnings %}No leaks; {{ report.warnings|length }} warning{{ 's' if report.warnings|length > 1 }}{% else %}No test-set leakage found{% endif %}
+      </div>
+      <div class="text-xs text-zinc-500">{{ report.fits|length }} fit{{ 's' if report.fits|length != 1 }} checked</div>
+    </div>
+    <div class="mt-4 space-y-3">
+      {% for f in report.findings %}{% set d = f.to_dict() %}
+      <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
+        <div class="flex items-start gap-3">
+          <span class="inline-flex shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase ring-1 {{ sev[f.level] }}">{{ f.level }}</span>
+          <div class="min-w-0">
+            <div class="text-sm font-medium text-zinc-100">{{ d.where }}: {{ f.msg }}</div>
+            <p class="mt-1 text-xs text-zinc-400">{{ d.why }}</p>
+            {% if d.fix %}<p class="mt-1 text-xs text-emerald-300/80">Fix: {{ d.fix }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% if report.fits %}
+    <div class="mt-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
+      <div class="text-xs uppercase tracking-wider text-zinc-500">Every fit and the rows it sees</div>
+      <table class="lp-table mt-2"><tbody>
+        {% for r in report.fits|sort(attribute='line') %}
+        <tr><td class="whitespace-nowrap">{{ r.where or ('line ' ~ r.line) }}</td><td class="font-mono text-zinc-300">{{ r.call }}</td>
+          <td class="{{ 'text-emerald-300' if r.sees == 'train rows only' else 'text-red-300' }}">{{ r.sees }}</td></tr>
+        {% endfor %}
+      </tbody></table>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="rounded-2xl border border-dashed border-zinc-800 p-8 text-sm text-zinc-500">
+      Results appear here: each leak with its line (or notebook cell), why it matters and the fix, plus a table of every fit and which rows it sees.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

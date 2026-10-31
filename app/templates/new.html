@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}New audit · Leakproof{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-2xl">
+  <h1 class="text-2xl font-semibold text-zinc-50">New audit</h1>
+  <p class="mt-1 text-sm text-zinc-500">CSV, TSV, Parquet, Feather, XLSX or JSON. Up to {{ owner.limits.max_mb }} MB on the {{ owner.limits.name }} plan. Files are deleted as soon as the report is generated; only statistics are kept.</p>
+  {% if error %}<div class="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">{{ error }}</div>{% endif %}
+  <form method="post" enctype="multipart/form-data" class="mt-6 space-y-5" id="f">
+    <label class="block text-sm"><span class="text-zinc-400">Train file <span class="text-red-300">*</span></span>
+      <input class="input mt-1 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-800 file:px-3 file:py-1 file:text-zinc-200" type="file" name="train" required accept=".csv,.tsv,.parquet,.pq,.feather,.xlsx,.xls,.json,.jsonl" id="train"></label>
+    <label class="block text-sm"><span class="text-zinc-400">Target column <span class="text-red-300">*</span></span>
+      <input class="input mt-1 font-mono" type="text" name="target" required placeholder="e.g. churned" list="cols" id="target">
+      <datalist id="cols"></datalist>
+      <span class="mt-1 block text-xs text-zinc-600" id="colhint">Pick the train file and the column names will appear here.</span></label>
+    <label class="block text-sm"><span class="text-zinc-400">Test file <span class="text-zinc-600">(optional, unlocks contamination + shift checks)</span></span>
+      <input class="input mt-1 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-800 file:px-3 file:py-1 file:text-zinc-200" type="file" name="test" accept=".csv,.tsv,.parquet,.pq,.feather,.xlsx,.xls,.json,.jsonl"></label>
+    <label class="block text-sm"><span class="text-zinc-400">Name <span class="text-zinc-600">(optional)</span></span><input class="input mt-1" type="text" name="name" placeholder="churn model v3"></label>
+    <button class="btn btn-primary w-full justify-center" type="submit" id="go">Run audit</button>
+  </form>
+  <div class="mt-6 text-xs text-zinc-600">Audits on the {{ owner.limits.name }} plan: {{ used }} used this month{% if owner.limits.audits_per_month < 1000 %} of {{ owner.limits.audits_per_month }}{% endif %}.</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+// read the CSV header client-side so the user can pick the target column
+document.getElementById('train').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; if (!f || !/\.(csv|tsv)$/i.test(f.name)) return;
+  const head = await f.slice(0, 65536).text();
+  const line = head.split(/\r?\n/)[0] || '';
+  const sep = /\.tsv$/i.test(f.name) ? '\t' : (line.split(';').length > line.split(',').length ? ';' : ',');
+  const cols = line.split(sep).map(c => c.replace(/^"|"$/g, '').trim()).filter(Boolean);
+  const dl = document.getElementById('cols'); dl.innerHTML = cols.map(c => `<option value="${c.replace(/"/g,'&quot;')}">`).join('');
+  document.getElementById('colhint').textContent = cols.length + ' columns: ' + cols.slice(0, 12).join(', ') + (cols.length > 12 ? ', …' : '');
+  const guess = cols.find(c => /^(target|label|y|churn|churned|fraud|default|outcome|class|is_|survived|price|sale)/i.test(c));
+  if (guess && !document.getElementById('target').value) document.getElementById('target').value = guess;
+});
+document.getElementById('f').addEventListener('submit', () => { const b = document.getElementById('go'); b.textContent = 'Uploading…'; b.disabled = true; });
+</script>
+{% endblock %}

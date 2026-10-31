@@ -1,0 +1,25 @@
+# fly launch --copy-config --no-deploy && fly volumes create leakproof_data --size 10 && fly secrets set SECRET_KEY=... ANTHROPIC_API_KEY=... && fly deploy
+app = "leakproof"
+primary_region = "sin"
+
+[build]
+
+[env]
+  BASE_URL = "https://leakproof.fly.dev"
+  LEAKPROOF_DATA_DIR = "/data"
+  LEAKPROOF_WORKERS = "2"
+
+[[mounts]]
+  source = "leakproof_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2gb"

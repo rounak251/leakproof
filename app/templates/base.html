@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Leakproof{% endblock %}</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { background:#09090b; color:#e4e4e7; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+  .lp-code { background:#0c0c0f; border:1px solid #27272a; border-radius:.6rem; padding:.75rem .9rem; font-size:12.5px; line-height:1.5; overflow:auto; color:#d4d4d8; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space:pre; }
+  .lp-table { width:100%; font-size:12.5px; border-collapse:collapse; }
+  .lp-table th { text-align:left; color:#71717a; font-weight:500; padding:.35rem .5rem; border-bottom:1px solid #27272a; }
+  .lp-table td { padding:.35rem .5rem; border-bottom:1px solid #18181b; color:#a1a1aa; vertical-align:top; }
+  details > summary::-webkit-details-marker { display:none; }
+  .btn { display:inline-flex; align-items:center; gap:.4rem; border-radius:.6rem; padding:.55rem 1rem; font-weight:500; font-size:14px; transition:.15s; }
+  .btn-primary { background:#10b981; color:#052e22; } .btn-primary:hover { background:#34d399; }
+  .btn-ghost { border:1px solid #3f3f46; color:#d4d4d8; } .btn-ghost:hover { background:#18181b; }
+  .input { width:100%; background:#0c0c0f; border:1px solid #3f3f46; border-radius:.6rem; padding:.6rem .8rem; color:#f4f4f5; font-size:14px; }
+  .input:focus { outline:none; border-color:#10b981; box-shadow:0 0 0 3px rgba(16,185,129,.15); }
+</style>
+{% block head %}{% endblock %}
+</head>
+<body class="min-h-screen">
+<nav class="sticky top-0 z-20 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur">
+  <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+    <a href="{{ '/app' if user else '/' }}" class="flex items-center gap-2 font-semibold text-zinc-100"><span class="inline-block h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399]"></span>Leakproof</a>
+    <div class="flex items-center gap-2 text-sm">
+      {% if user %}
+        <a href="/app" class="btn btn-ghost hidden sm:inline-flex">Audits</a>
+        <a href="/app/lint" class="btn btn-ghost hidden sm:inline-flex">Check code</a>
+        <a href="/app/new" class="btn btn-primary">New audit</a>
+        <a href="/app/settings" class="btn btn-ghost" title="{{ user.email }}">Settings</a>
+        <a href="/logout" class="px-2 text-zinc-500 hover:text-zinc-200">Log out</a>
+      {% else %}
+        <a href="/#pricing" class="px-3 text-zinc-400 hover:text-zinc-100">Pricing</a>
+        <a href="/login" class="btn btn-ghost">Log in</a>
+        <a href="/signup" class="btn btn-primary">Start free</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+<main class="mx-auto max-w-6xl px-4 py-8 md:py-10">
+{% block content %}{% endblock %}
+</main>
+<footer class="mx-auto max-w-6xl px-4 py-10 text-xs text-zinc-600">© 2026 Leakproof · v{{ version }} · <a href="/api/docs" class="hover:text-zinc-300">API docs</a></footer>
+{% block scripts %}{% endblock %}
+</body>
+</html>

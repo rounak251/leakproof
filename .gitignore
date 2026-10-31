@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+data/
+.env
+demo_report.json
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Private business docs (kept local)
+GTM.md
+REVIEW_codex.md

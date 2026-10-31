@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Audits · Leakproof{% endblock %}
+{% block content %}
+{% if welcome %}
+<div class="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5">
+  <div class="font-semibold text-emerald-200">Welcome. Two ways to start:</div>
+  <div class="mt-3 flex flex-wrap gap-3">
+    <form method="post" action="/app/demo"><button class="btn btn-primary">Run the planted-leak demo (30 s)</button></form>
+    <a href="/app/new" class="btn btn-ghost">Upload your own CSV</a>
+  </div>
+</div>
+{% elif request.query_params.get('demo') %}
+<form method="post" action="/app/demo" class="mb-6"><button class="btn btn-primary">Run the planted-leak demo</button></form>
+{% endif %}
+
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-semibold text-zinc-50">Audits</h1>
+    <p class="mt-1 text-sm text-zinc-500">{{ owner.limits.name }} plan ·
+      {% if owner.limits.audits_per_month < 1000 %}{{ used }} of {{ owner.limits.audits_per_month }} audits used this month{% else %}unlimited audits{% endif %}
+      {% if owner.plan == 'free' %}· <a href="/app/settings#upgrade" class="text-emerald-300">Upgrade</a>{% endif %}</p>
+  </div>
+  <div class="flex gap-2">
+    <form method="post" action="/app/demo"><button class="btn btn-ghost">Run demo</button></form>
+    <a href="/app/new" class="btn btn-primary">New audit</a>
+  </div>
+</div>
+
+{% if not audits %}
+<div class="mt-8 rounded-2xl border border-dashed border-zinc-800 p-10 text-center text-zinc-500">No audits yet. Upload a train file and name the target column, or run the demo.</div>
+{% else %}
+<div class="mt-6 overflow-hidden rounded-2xl border border-zinc-800">
+  <table class="w-full text-sm">
+    <thead class="bg-zinc-900/80 text-xs uppercase tracking-wider text-zinc-500">
+      <tr><th class="px-4 py-3 text-left">Dataset</th><th class="px-4 py-3 text-left">Target</th><th class="px-4 py-3 text-left">Rows</th><th class="px-4 py-3 text-left">Score</th><th class="px-4 py-3 text-left">Status</th><th class="px-4 py-3 text-left">When</th></tr>
+    </thead>
+    <tbody class="divide-y divide-zinc-800/80">
+      {% for a in audits %}
+      {% set gc = {'A':'text-emerald-300','B':'text-lime-300','C':'text-amber-300','D':'text-orange-300','F':'text-red-300'} %}
+      <tr class="hover:bg-zinc-900/60">
+        <td class="px-4 py-3"><a class="font-medium text-zinc-100 hover:text-emerald-300" href="/app/audits/{{ a.id }}">{{ a.name }}</a>{% if a.is_demo %} <span class="ml-1 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">demo</span>{% endif %}</td>
+        <td class="px-4 py-3 font-mono text-xs text-zinc-400">{{ a.target }}</td>
+        <td class="px-4 py-3 text-zinc-400">{{ a.n_rows|num if a.n_rows else '—' }}</td>
+        <td class="px-4 py-3">{% if a.score is not none %}<span class="font-semibold {{ gc[a.grade] }}">{{ a.score }}</span> <span class="text-zinc-500">{{ a.grade }}</span>{% else %}—{% endif %}</td>
+        <td class="px-4 py-3">
+          {% if a.status == 'done' %}<span class="text-emerald-300">done</span>
+          {% elif a.status == 'failed' %}<span class="text-red-300" title="{{ a.error }}">failed</span>
+          {% else %}<span class="text-amber-200">{{ a.status }}</span>{% endif %}</td>
+        <td class="px-4 py-3 text-zinc-500">{{ a.created_at.strftime('%b %d, %H:%M') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div class="mt-10 grid gap-4 md:grid-cols-2">
+  <div class="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
+    <div class="text-sm font-semibold text-zinc-200">Prefer the terminal?</div>
+    <pre class="lp-code mt-3"><code>pip install leakproof-audit
+leakproof audit train.csv --test test.csv --target {{ audits[0].target if audits else 'y' }}
+leakproof gate  train.csv --target y --min-score 80   # CI: exit 1 on failure</code></pre>
+  </div>
+  <div class="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
+    <div class="text-sm font-semibold text-zinc-200">What gets checked</div>
+    <ul class="mt-2 grid grid-cols-2 gap-1 text-sm text-zinc-400">
+      <li>· target leakage</li><li>· train/test contamination</li><li>· duplicates</li><li>· label noise</li><li>· distribution shift</li><li>· group / time CV</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

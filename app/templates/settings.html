@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Settings · Leakproof{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-semibold text-zinc-50">Settings</h1>
+{% if msg %}<div class="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">{{ msg }}</div>{% endif %}
+
+<section class="mt-6 grid gap-6 md:grid-cols-2">
+  <div class="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
+    <div class="text-sm font-semibold text-zinc-200">Account</div>
+    <dl class="mt-3 space-y-2 text-sm">
+      <div class="flex justify-between"><dt class="text-zinc-500">Email</dt><dd class="text-zinc-200">{{ user.email }}</dd></div>
+      <div class="flex justify-between"><dt class="text-zinc-500">Plan</dt><dd class="text-zinc-200">{{ owner.limits.name }}{% if owner.id != user.id %} (member of {{ owner.email }}){% endif %}</dd></div>
+      <div class="flex justify-between"><dt class="text-zinc-500">File limit</dt><dd class="text-zinc-200">{{ owner.limits.max_mb }} MB</dd></div>
+    </dl>
+    {% if (user.stripe_customer_id or user.lemon_customer_id) and billing_enabled %}
+    <form method="post" action="/billing/portal" class="mt-4"><button class="btn btn-ghost">Manage billing</button></form>
+    {% endif %}
+  </div>
+
+  <div class="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
+    <div class="text-sm font-semibold text-zinc-200">API key <span class="text-xs font-normal text-zinc-500">(Team plan)</span></div>
+    <pre class="lp-code mt-3 select-all">{{ user.api_key }}</pre>
+    <form method="post" action="/app/settings/rotate-key" class="mt-3"><button class="btn btn-ghost">Rotate key</button></form>
+    <pre class="lp-code mt-4"><code>curl -F train=@train.csv -F test=@test.csv -F target=y \
+  -H "Authorization: Bearer $LEAKPROOF_KEY" {{ BASE_URL }}/api/v1/audits</code></pre>
+  </div>
+</section>
+
+<section id="upgrade" class="mt-10">
+  <h2 class="text-lg font-semibold text-zinc-100">Plans</h2>
+  {% if not billing_enabled %}<p class="mt-1 text-xs text-amber-200/80">Billing is not configured on this deployment yet (set the LEMON_* or STRIPE_* variables). Buttons below are inert.</p>{% endif %}
+  <div class="mt-4 grid gap-4 md:grid-cols-3">
+    {% for key in ['free','pro','team'] %}{% set p = PLANS[key] %}
+    <div class="rounded-2xl border {{ 'border-emerald-500/40' if key == 'pro' else 'border-zinc-800' }} bg-zinc-900/40 p-5">
+      <div class="flex items-baseline justify-between"><div class="font-semibold text-zinc-100">{{ p.name }}</div><div class="text-zinc-300">{% if p.price %}${{ p.price }}<span class="text-xs text-zinc-500">/mo</span>{% else %}$0{% endif %}</div></div>
+      <ul class="mt-3 space-y-1 text-sm text-zinc-400">
+        <li>· {{ 'Unlimited' if p.audits_per_month > 1000 else p.audits_per_month }} audits / month</li>
+        <li>· Files up to {{ p.max_mb }} MB</li>
+        {% if p.narrative %}<li>· Claude fix plan</li>{% endif %}
+        {% if p.share %}<li>· Share links, HTML/PDF &amp; evidence export</li>{% endif %}
+        {% if p.api %}<li>· REST API + CI gate</li><li>· {{ p.seats }} seats</li>{% endif %}
+      </ul>
+      {% if owner.plan == key %}<div class="mt-4 text-sm text-emerald-300">Current plan</div>
+      {% elif key != 'free' %}
+      <form method="post" action="/billing/checkout" class="mt-4 flex gap-2">
+        <input type="hidden" name="plan" value="{{ key }}"><button class="btn btn-primary">Upgrade</button>
+        {% if key == 'pro' %}<button class="btn btn-ghost" name="plan" value="pro_year" formaction="/billing/checkout">$290/yr</button>{% endif %}
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <p class="mt-3 text-sm text-zinc-500">Enterprise (on-prem Docker, SSO, audit log, validation-evidence exports, unlimited seats): <a class="text-emerald-300" href="mailto:hello@leakproof.dev">hello@leakproof.dev</a></p>
+</section>
+
+{% if owner.id == user.id and owner.limits.seats > 1 %}
+<section class="mt-10 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
+  <div class="text-sm font-semibold text-zinc-200">Team members <span class="text-xs font-normal text-zinc-500">({{ members|length + 1 }} of {{ owner.limits.seats }} seats)</span></div>
+  <ul class="mt-2 text-sm text-zinc-400"><li>· {{ user.email }} (owner)</li>{% for m in members %}<li>· {{ m.email }}</li>{% endfor %}</ul>
+  <form method="post" action="/app/settings/invite" class="mt-3 flex gap-2"><input class="input" type="email" name="email" placeholder="colleague@company.com" required><button class="btn btn-ghost">Invite</button></form>
+</section>
+{% endif %}
+
+<section class="mt-10">
+  <details class="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
+    <summary class="cursor-pointer text-sm font-semibold text-zinc-200">Audit log <span class="text-xs font-normal text-zinc-500">(last 50 events)</span></summary>
+    <table class="lp-table mt-3"><thead><tr><th>when (UTC)</th><th>event</th><th>detail</th></tr></thead>
+    <tbody>{% for e in events %}<tr><td>{{ e.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td><td>{{ e.kind }}</td><td class="truncate max-w-md">{{ e.detail }}</td></tr>{% endfor %}</tbody></table>
+  </details>
+</section>
+{% endblock %}

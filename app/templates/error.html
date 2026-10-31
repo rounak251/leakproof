@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ status }} · Leakproof{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8 text-center">
+  <div class="text-4xl font-semibold text-zinc-200">{{ status }}</div>
+  <p class="mt-2 text-sm text-zinc-400">{{ detail }}</p>
+  {% if status == 402 %}<a href="/app/settings#upgrade" class="btn btn-primary mt-5">See plans</a>{% else %}<a href="/app" class="btn btn-ghost mt-5">Back</a>{% endif %}
+</div>
+{% endblock %}

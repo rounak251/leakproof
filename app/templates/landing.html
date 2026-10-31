@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090c0b">
+  <title>Leakproof — catch data leakage before you train</title>
+  <meta name="description" content="Audit your ML dataset before you train. Find target leakage, contaminated splits, label noise, distribution shift, and inflated CV scores—with a 0–100 Leakproof Score and exact code fixes.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Leakproof">
+  <meta property="og:title" content="Leakproof — catch data leakage before you train">
+  <meta property="og:description" content="Your model will fail. Leakproof tells you why, before you train. Upload a dataset, get an honest score, and fix the issues that matter.">
+  <meta property="og:url" content="https://leakproof.dev/">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Leakproof — catch data leakage before you train">
+  <meta name="twitter:description" content="A reality check for your dataset. Find leakage, contaminated splits, and inflated CV scores before you train.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;600;650;700;750;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { color-scheme: dark; --bg: #090c0b; --panel: #101412; --panel-raised: #141a17; --text: #f0f4f1; --muted: #a0aaa4; --dim: #7e8b82; --accent: #6ee7b7; --accent-dark: #10251b; --line: rgba(218, 242, 227, .11); --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace; }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 100px; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+    ::selection { color: var(--text); background: #22533c; }
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button, a, summary { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
+    h1, h2, h3, p, ul, ol, pre { margin: 0; }
+    ul, ol { padding: 0; list-style: none; }
+    svg { flex-shrink: 0; }
+    .icon { display: inline-block; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
+    .page-shell { width: min(100% - 96px, 1248px); margin-inline: auto; }
+    .section { padding-block: 108px; }
+    .eyebrow { display: flex; align-items: center; gap: 10px; color: var(--accent); font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: .12em; line-height: 1.7; text-transform: uppercase; }
+    .section-title { margin-top: 15px; font-size: clamp(30px, 3.5vw, 43px); font-weight: 550; line-height: 1.16; letter-spacing: -.045em; text-wrap: balance; }
+    .section-copy { max-width: 560px; margin-top: 18px; color: var(--muted); font-size: 16px; line-height: 1.75; }
+    .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 36px; margin-bottom: 44px; }
+    .section-heading > p { max-width: 370px; color: var(--muted); font-size: 14px; line-height: 1.8; }
+    .mono, code, pre { font-family: var(--mono); }
+    p code, li > code { color: #d2ddd6; font-size: .88em; }
+    .accent { color: var(--accent); }
+    .muted { color: var(--muted); }
+    .button { display: inline-flex; min-height: 46px; justify-content: center; align-items: center; gap: 10px; padding: 11px 19px; border: 1px solid var(--line); border-radius: 7px; color: var(--text); background: #131815; font-size: 13px; font-weight: 600; line-height: 1.5; transition: background .18s, border-color .18s, transform .18s; }
+    .button:hover { background: #1b241e; border-color: #4c6255; transform: translateY(-1px); }
+    .button-primary { color: #092117; background: var(--accent); border-color: var(--accent); box-shadow: 0 0 24px rgba(110, 231, 183, .06); }
+    .button-primary:hover { background: #9ceecb; border-color: #9ceecb; }
+    .button .icon { width: 16px; height: 16px; }
+    .text-link { display: inline-flex; align-items: center; gap: 8px; color: var(--accent); font-size: 13px; font-weight: 500; }
+    .text-link:hover { color: #b2f3d8; }
+    .text-link .icon { width: 15px; height: 15px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    .skip-link { position: fixed; z-index: 100; top: 10px; left: 16px; padding: 10px 16px; transform: translateY(-150%); border-radius: 5px; background: var(--accent); color: #092117; }
+    .skip-link:focus { transform: translateY(0); }
+    .site-header { position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--line); background: rgba(9, 12, 11, .91); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+    .nav-row { display: flex; min-height: 76px; align-items: center; justify-content: space-between; gap: 28px; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 21px; font-weight: 650; letter-spacing: -.055em; }
+    .brand-mark { width: 29px; height: 29px; color: var(--accent); stroke-width: 1.7; }
+    .desktop-nav { display: flex; align-items: center; gap: 28px; margin-left: auto; margin-right: 38px; }
+    .desktop-nav a, .login-link { color: #aeb7b1; font-size: 12px; font-weight: 500; transition: color .18s; }
+    .desktop-nav a:hover, .login-link:hover { color: var(--text); }
+    .nav-actions { display: flex; align-items: center; gap: 23px; }
+    .nav-actions .button { min-height: 36px; padding: 7px 14px; font-size: 12px; }
+    .menu-toggle { display: none; width: 36px; height: 36px; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--text); }
+    .mobile-nav { padding: 8px 0 18px; border-top: 1px solid var(--line); }
+    .mobile-nav[hidden] { display: none; }
+    .mobile-nav a { display: block; padding: 11px 0; color: #c7d0ca; font-size: 14px; }
+    .hero { position: relative; isolation: isolate; padding-top: 92px; padding-bottom: 80px; }
+    .hero::before { position: absolute; z-index: -1; inset: 0; pointer-events: none; content: ''; background: radial-gradient(ellipse at 75% 30%, rgba(67, 145, 104, .10), transparent 55%), linear-gradient(rgba(167, 211, 184, .025) 1px, transparent 1px), linear-gradient(90deg, rgba(167, 211, 184, .025) 1px, transparent 1px); background-size: auto, 64px 64px, 64px 64px; mask-image: linear-gradient(#000, #000 65%, transparent); }
+    .hero-grid { display: grid; grid-template-columns: 1fr 1.09fr; align-items: center; gap: 64px; }
+    .hero-copy, .report, .feature-card, .terminal, .doc-card { min-width: 0; }
+    .hero .eyebrow { font-size: 10px; letter-spacing: .09em; }
+    .status-dot { display: inline-block; flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px rgba(110, 231, 183, .08); }
+    .hero h1 { margin-top: 26px; font-size: clamp(43px, 4.35vw, 61px); font-weight: 550; line-height: 1.075; letter-spacing: -.06em; }
+    .hero h1 .opening { display: block; margin-bottom: 14px; }
+    .hero h1 .promise { color: var(--accent); }
+    .hero-description { max-width: 480px; margin-top: 25px; color: #aab5ad; font-size: 15px; line-height: 1.9; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+    .hero-note { margin-top: 15px; color: var(--dim); font-size: 11px; }
+    .install-command { display: inline-flex; max-width: 100%; align-items: center; gap: 13px; margin-top: 29px; padding-top: 23px; border-top: 1px solid var(--line); color: #c4cfc7; font-size: 12px; }
+    .install-command .prompt { color: #66766b; user-select: none; }
+    .copy-button { display: inline-flex; min-width: 34px; min-height: 34px; align-items: center; justify-content: center; gap: 6px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 5px; background: transparent; color: var(--muted); font-family: var(--font); font-size: 10px; transition: border-color .18s, color .18s; }
+    .copy-button:hover { color: var(--text); border-color: #48574d; }
+    .copy-button .icon { width: 13px; height: 13px; }
+    .report { position: relative; border: 1px solid #314238; border-radius: 12px; background: #101512; box-shadow: 0 24px 90px #0006, 0 0 55px rgba(68, 149, 103, .035); }
+    .report::before { position: absolute; top: -1px; left: 10%; right: 10%; height: 1px; content: ''; background: linear-gradient(90deg, transparent, #709681, transparent); }
+    .report-topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 49px; padding: 12px 21px; border-bottom: 1px solid var(--line); border-radius: 12px 12px 0 0; background: #151b17; font-family: var(--mono); font-size: 10px; }
+    .report-file { display: inline-flex; align-items: center; gap: 8px; color: #c8d1cb; }
+    .report-file .icon { width: 14px; height: 14px; color: #8d9e92; }
+    .report-example { color: #9eada3; font-size: 9px; letter-spacing: .03em; white-space: nowrap; }
+    .report-summary { display: flex; align-items: center; gap: 20px; padding: 25px 23px 23px; }
+    .score-dial { position: relative; flex: 0 0 101px; width: 101px; height: 101px; }
+    .score-dial > svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+    .score-number { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    .score-number strong { margin-top: 5px; font-size: 39px; font-weight: 550; line-height: 1.1; letter-spacing: -.07em; }
+    .score-number span { margin-top: 3px; font-family: var(--mono); font-size: 10px; color: #8f9f94; }
+    .score-context { min-width: 0; }
+    .score-label { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin-bottom: 10px; font-family: var(--mono); font-size: 8px; letter-spacing: .08em; color: #a1b2a6; text-transform: uppercase; }
+    .grade-pill { padding: 2px 6px; border: 1px solid #5a645e; border-radius: 3px; color: #f0f4f1; font-size: 9px; letter-spacing: 0; }
+    .report h2 { font-size: 17px; font-weight: 500; line-height: 1.55; letter-spacing: -.025em; text-wrap: pretty; }
+    .report h2 .honest-score { color: var(--accent); }
+    .findings-heading { display: flex; justify-content: space-between; gap: 12px; padding: 12px 23px; border-block: 1px solid var(--line); background: #0c110e; color: #85958a; font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+    .finding { display: grid; grid-template-columns: 64px 1fr; align-items: start; gap: 13px; margin-inline: 23px; padding-block: 16px; border-bottom: 1px solid var(--line); }
+    .finding:last-child { border-bottom: 0; }
+    .severity { display: inline-block; width: max-content; margin-top: 1px; padding: 3px 6px; border: 1px solid #65746a; border-radius: 3px; background: #27302a; color: #e4ece6; font-family: var(--mono); font-size: 8px; line-height: 1.6; letter-spacing: .02em; }
+    .severity-medium { color: #aab8af; background: #171e19; border-color: #38463d; }
+    .finding p { color: #cbd6ce; font-size: 11px; line-height: 1.8; }
+    .finding code { color: #edf3ef; font-size: .95em; overflow-wrap: anywhere; }
+    .report-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 23px; border-top: 1px solid var(--line); border-radius: 0 0 12px 12px; background: #131a15; }
+    .report-footer > span { display: inline-flex; align-items: center; gap: 6px; color: #9eada3; font-size: 9px; }
+    .report-footer > span .icon { width: 13px; height: 13px; color: var(--accent); }
+    .report-footer .text-link { font-size: 10px; }
+    .use-cases { padding-block: 30px 34px; border-bottom: 1px solid var(--line); }
+    .use-case-label { margin-bottom: 20px; color: #7f8c83; font-family: var(--mono); font-size: 9px; letter-spacing: .15em; text-align: center; text-transform: uppercase; }
+    .use-case-list { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 13px 0; color: #aeb9b1; font-size: 13px; font-weight: 500; text-align: center; }
+    .use-case-list li { display: flex; align-items: center; }
+    .use-case-list li:not(:last-child)::after { content: '·'; margin-inline: 27px; color: #506056; }
+    .how-section { padding-bottom: 93px; }
+    .steps { border-top: 1px solid var(--line); }
+    .step { display: grid; grid-template-columns: 45px 1fr 1.06fr; gap: 27px; padding-block: 30px; border-bottom: 1px solid var(--line); }
+    .step-number { display: flex; width: 35px; height: 35px; align-items: center; justify-content: center; margin-top: 2px; border: 1px solid #2e4235; border-radius: 7px; background: #101a14; color: var(--accent); font-family: var(--mono); font-size: 11px; }
+    .step h3 { margin-bottom: 9px; font-size: 17px; font-weight: 500; letter-spacing: -.025em; }
+    .step-instruction { max-width: 320px; color: var(--muted); font-size: 13px; line-height: 1.85; }
+    .step-benefit { padding-left: 34px; border-left: 1px solid var(--line); }
+    .step-benefit h4 { margin: 0 0 8px; color: #d2dfd6; font-size: 12px; font-weight: 550; }
+    .step-benefit p { color: #8f9d94; font-size: 12px; line-height: 1.9; }
+    .features-section { padding-top: 76px; padding-bottom: 91px; border-block: 1px solid var(--line); background: #0c100e; }
+    .feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .feature-card { display: flex; flex-direction: column; padding: 25px; border: 1px solid var(--line); border-radius: 8px; background: linear-gradient(140deg, #141a16, #101512 70%); transition: border-color .2s; }
+    .feature-card:hover { border-color: #3c5646; }
+    .feature-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .feature-icon { display: flex; width: 34px; height: 34px; align-items: center; justify-content: center; border: 1px solid #304437; border-radius: 7px; background: #16231b; color: var(--accent); }
+    .feature-icon .icon { width: 17px; height: 17px; }
+    .feature-index { color: #6f8174; font-family: var(--mono); font-size: 10px; }
+    .feature-card h3 { font-size: 16px; font-weight: 550; letter-spacing: -.025em; }
+    .feature-card > p { flex: 1; margin-top: 10px; margin-bottom: 22px; color: #97a69b; font-size: 12px; line-height: 1.85; }
+    .feature-code { padding: 12px 13px; border: 1px solid #243128; border-radius: 5px; background: #0a100c; color: #b6d1bf; font-size: 10px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .features-note { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 25px; color: #8b9c91; font-size: 11px; text-align: center; }
+    .features-note .icon { width: 15px; height: 15px; color: var(--accent); }
+    .cli-grid { display: grid; grid-template-columns: .7fr 1.3fr; gap: 60px; align-items: center; }
+    .cli-copy .section-title { max-width: 360px; }
+    .cli-copy .section-copy { font-size: 14px; }
+    .cli-benefits { display: grid; gap: 12px; margin-top: 25px; color: #b3c1b8; font-size: 12px; }
+    .cli-benefits li { display: flex; align-items: center; gap: 9px; }
+    .cli-benefits .icon { width: 14px; height: 14px; color: var(--accent); }
+    .terminal { border: 1px solid #344039; border-radius: 9px; background: #0b0f0d; box-shadow: 0 16px 60px #0003; }
+    .terminal-bar { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 18px; border-bottom: 1px solid var(--line); border-radius: 9px 9px 0 0; background: #151a17; }
+    .terminal-dots { display: flex; gap: 5px; }
+    .terminal-dots i { width: 7px; height: 7px; border: 1px solid #536057; border-radius: 50%; background: #354039; }
+    .terminal-title { flex: 1; color: #87998d; font-family: var(--mono); font-size: 9px; text-align: center; }
+    .terminal-local { color: #8fa797; font-family: var(--mono); font-size: 8px; letter-spacing: .07em; }
+    .terminal pre { padding: 25px 22px 29px; color: #c5d2c9; font-size: 11px; line-height: 2.1; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .terminal .prompt { color: var(--accent); user-select: none; }
+    .terminal .output { color: #91a699; }
+    .terminal .terminal-warning { color: #edf3ef; }
+    .terminal .comment { color: #829488; }
+    .enterprise-section { padding-top: 8px; padding-bottom: 108px; }
+    .enterprise-card { display: grid; grid-template-columns: 1fr .9fr; gap: 66px; align-items: center; padding: 54px; border: 1px solid #334b3c; border-radius: 12px; background: radial-gradient(ellipse at 100% 0%, #18332566, transparent 65%), #101713; }
+    .enterprise-copy .section-title { font-size: clamp(29px, 3vw, 38px); }
+    .enterprise-copy .section-copy { max-width: 450px; font-size: 14px; }
+    .enterprise-copy .button { margin-top: 25px; }
+    .vpc-diagram { border: 1px dashed #496452; border-radius: 8px; background: #0b120e; padding: 19px; }
+    .vpc-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #9ab7a5; font-family: var(--mono); font-size: 8px; letter-spacing: .08em; }
+    .vpc-heading > span { display: flex; align-items: center; gap: 6px; }
+    .vpc-heading .icon { width: 12px; height: 12px; color: var(--accent); }
+    .vpc-flow { display: grid; grid-template-columns: 1fr 21px 1fr 21px 1fr; gap: 8px; align-items: center; padding-block: 28px 22px; }
+    .vpc-node { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 9px; color: #adbbb2; font-size: 9px; text-align: center; }
+    .vpc-node > .icon { width: 42px; height: 42px; padding: 11px; border: 1px solid #2a3d30; border-radius: 8px; background: #151f18; }
+    .vpc-node.active { color: var(--accent); }
+    .vpc-node.active > .icon { border-color: #537c64; background: #1a3122; }
+    .vpc-flow > .icon { width: 17px; height: 17px; margin-bottom: 24px; color: #536e5d; }
+    .evidence-note { padding-top: 14px; border-top: 1px solid var(--line); color: #92a699; font-size: 10px; text-align: center; }
+    .evidence-note strong { display: block; margin-bottom: 3px; color: #c4d9cb; font-size: 11px; font-weight: 500; }
+    .enterprise-capabilities { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 15px; margin-top: 20px; color: #aebfb4; font-size: 10px; }
+    .enterprise-capabilities li { display: flex; align-items: center; gap: 7px; }
+    .enterprise-capabilities .icon { width: 12px; height: 12px; color: var(--accent); }
+    .pricing-section { padding-top: 83px; border-top: 1px solid var(--line); background: #0c100e; }
+    .pricing-header { margin-bottom: 44px; text-align: center; }
+    .pricing-header .eyebrow { justify-content: center; }
+    .pricing-header .section-copy { max-width: none; font-size: 14px; }
+    .pricing-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .price-card { display: flex; min-width: 0; flex-direction: column; padding: 24px 22px 22px; border: 1px solid #2c3930; border-radius: 8px; background: #111713; }
+    .price-card.popular { position: relative; border-color: #65977b; background: linear-gradient(160deg, #1a2c20, #111a15 65%); box-shadow: 0 0 36px #6ee7b708; }
+    .plan-heading { display: flex; min-height: 25px; align-items: center; justify-content: space-between; gap: 7px; }
+    .plan-heading h3 { font-size: 15px; font-weight: 550; letter-spacing: -.025em; }
+    .popular-label { padding: 3px 7px; border: 1px solid #426a50; border-radius: 4px; background: #213c2b; color: var(--accent); font-size: 8px; font-weight: 550; white-space: nowrap; }
+    .plan-for { margin-top: 8px; color: #8e9e94; font-size: 11px; }
+    .price { margin-top: 23px; color: var(--text); font-size: 44px; font-weight: 500; letter-spacing: -.065em; line-height: 1.1; }
+    .price span { margin-left: 4px; color: #9baaa0; font-size: 12px; font-weight: 400; letter-spacing: 0; }
+    .price.custom { padding-block: 5px 4px; font-size: 36px; letter-spacing: -.045em; }
+    .price-note { min-height: 19px; margin-top: 10px; color: #95a89b; font-size: 10px; }
+    .plan-features { display: grid; align-content: start; gap: 12px; flex: 1; margin-top: 24px; margin-bottom: 28px; padding-top: 22px; border-top: 1px solid var(--line); }
+    .plan-features li { display: flex; align-items: flex-start; gap: 8px; color: #b9c6bd; font-size: 11px; line-height: 1.7; }
+    .plan-features .icon { width: 13px; height: 13px; margin-top: 3px; color: #8aaf97; }
+    .popular .plan-features .icon { color: var(--accent); }
+    .price-card .button { width: 100%; min-height: 40px; padding: 10px; font-size: 11px; }
+    .pricing-footnote { margin-top: 24px; color: #8a9c90; font-size: 11px; text-align: center; }
+    .docs-section { border-block: 1px solid var(--line); padding-block: 80px; }
+    .docs-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .doc-card { display: flex; flex-direction: column; border: 1px solid #29392e; border-radius: 8px; background: #101612; }
+    .doc-header { display: flex; min-height: 52px; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 17px; border-bottom: 1px solid var(--line); }
+    .doc-header h3 { display: flex; align-items: center; gap: 9px; font-size: 11px; font-weight: 500; }
+    .doc-header h3 .icon { width: 14px; height: 14px; color: #91b69d; }
+    .doc-card pre { flex: 1; padding: 22px 19px; color: #bbd1c2; font-size: 11px; line-height: 1.95; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .doc-comment { color: #829789; }
+    .faq-grid { display: grid; grid-template-columns: .7fr 1.3fr; gap: 72px; }
+    .faq-intro .section-copy { font-size: 14px; }
+    .faq-intro .text-link { margin-top: 24px; }
+    .faq-list { border-top: 1px solid var(--line); }
+    .faq-list details { border-bottom: 1px solid var(--line); }
+    .faq-list summary { display: flex; align-items: center; justify-content: space-between; gap: 25px; padding-block: 23px; cursor: pointer; list-style: none; color: #d3ded6; font-size: 13px; font-weight: 500; }
+    .faq-list summary::-webkit-details-marker { display: none; }
+    .faq-list summary::marker { content: ''; }
+    .faq-list summary .icon { width: 15px; height: 15px; color: #8ca794; transition: transform .18s; }
+    .faq-list details[open] summary .icon { transform: rotate(45deg); color: var(--accent); }
+    .faq-list details > p { max-width: 590px; padding: 0 36px 23px 0; color: #92a298; font-size: 12px; line-height: 1.95; }
+    .faq-list details code { overflow-wrap: anywhere; }
+    .final-cta { position: relative; padding-block: 79px 87px; border-block: 1px solid var(--line); background: radial-gradient(ellipse at 50% 100%, #18352455, transparent 75%), #0e1410; text-align: center; }
+    .final-cta .eyebrow { justify-content: center; }
+    .final-cta .section-title { max-width: 720px; margin-inline: auto; font-size: clamp(34px, 4.5vw, 52px); }
+    .final-cta p { margin-top: 18px; color: #9aae9f; font-size: 14px; }
+    .final-cta .button { margin-top: 27px; padding-inline: 23px; }
+    .final-cta .final-cli { margin-top: 19px; color: #7f9688; font-size: 11px; }
+    .final-cli a { display: inline-block; color: #adc9b7; }
+    .final-cli a:hover { color: var(--accent); }
+    .footer-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 25px; padding-block: 33px; }
+    .footer-brand { display: flex; align-items: center; gap: 24px; }
+    .footer-brand .brand { gap: 7px; font-size: 15px; }
+    .footer-brand .brand-mark { width: 21px; height: 21px; }
+    .copyright { color: #788e7f; font-size: 10px; }
+    .footer-links { display: flex; align-items: center; gap: 25px; color: #93a499; font-size: 11px; }
+    .footer-links a:hover { color: var(--text); }
+    @media (min-width: 1450px) { .hero { padding-top: 110px; padding-bottom: 100px; } }
+    @media (max-width: 1120px) {
+      .page-shell { width: calc(100% - 64px); }
+      .hero-grid { gap: 35px; grid-template-columns: .95fr 1.05fr; }
+      .hero h1 { font-size: 48px; }
+      .hero-description { font-size: 14px; }
+      .report-summary { gap: 14px; padding: 23px 18px; }
+      .score-dial { flex-basis: 82px; width: 82px; height: 82px; }
+      .score-number strong { font-size: 32px; }
+      .report h2 { font-size: 15px; }
+      .finding { gap: 10px; margin-inline: 18px; }
+      .findings-heading, .report-footer { padding-inline: 18px; }
+      .desktop-nav { gap: 22px; margin-right: 10px; }
+      .hero .eyebrow { font-size: 9px; }
+      .feature-card { padding: 21px; }
+      .cli-grid { gap: 36px; }
+      .enterprise-card { gap: 42px; padding: 38px; }
+      .pricing-grid { gap: 12px; }
+      .price-card { padding-inline: 17px; }
+      .popular-label { padding-inline: 5px; font-size: 7px; }
+      .faq-grid { gap: 48px; }
+      .use-case-list li:not(:last-child)::after { margin-inline: 19px; }
+    }
+    @media (max-width: 900px) {
+      .hero { padding-top: 67px; padding-bottom: 55px; }
+      .hero-grid { grid-template-columns: 1fr; gap: 45px; }
+      .hero-copy { max-width: 650px; margin-inline: auto; text-align: center; }
+      .hero-copy .eyebrow { justify-content: center; font-size: 10px; }
+      .hero h1 { max-width: 650px; font-size: 60px; }
+      .hero h1 .opening { margin-bottom: 8px; }
+      .hero-description { max-width: 540px; margin-inline: auto; font-size: 15px; }
+      .hero-actions { justify-content: center; }
+      .install-command { margin-top: 21px; padding-top: 17px; }
+      .report { width: min(100%, 630px); margin-inline: auto; }
+      .report-summary { padding: 25px; gap: 23px; }
+      .score-dial { flex-basis: 98px; width: 98px; height: 98px; }
+      .score-number strong { font-size: 38px; }
+      .score-label { font-size: 9px; }
+      .report h2 { font-size: 19px; }
+      .finding { margin-inline: 25px; padding-block: 16px; }
+      .finding p { font-size: 12px; }
+      .severity { font-size: 8px; }
+      .report-topbar, .findings-heading, .report-footer { padding-inline: 25px; }
+      .use-case-list { font-size: 11px; }
+      .use-case-list li:not(:last-child)::after { margin-inline: 13px; }
+      .section { padding-block: 78px; }
+      .section-heading { align-items: flex-start; gap: 24px; }
+      .section-heading > p { max-width: 260px; font-size: 12px; }
+      .step { grid-template-columns: 35px 1fr 1fr; gap: 19px; }
+      .step-benefit { padding-left: 20px; }
+      .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .cli-grid { grid-template-columns: 1fr; gap: 30px; }
+      .cli-copy .section-title { max-width: none; }
+      .cli-benefits { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 480px; }
+      .terminal pre { font-size: 12px; }
+      .enterprise-section { padding-bottom: 78px; }
+      .enterprise-card { gap: 35px; padding: 30px; }
+      .vpc-diagram { padding: 14px; }
+      .vpc-flow { gap: 4px; grid-template-columns: 1fr 16px 1fr 16px 1fr; }
+      .enterprise-capabilities { font-size: 9px; gap: 10px 8px; }
+      .pricing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+      .price-card { padding: 25px; }
+      .popular-label { font-size: 9px; padding: 3px 8px; }
+      .plan-features { min-height: 183px; }
+      .faq-grid { grid-template-columns: .65fr 1.35fr; gap: 32px; }
+    }
+    @media (max-width: 700px) {
+      .page-shell { width: calc(100% - 32px); }
+      .nav-row { min-height: 65px; gap: 15px; }
+      .brand { gap: 8px; font-size: 20px; }
+      .brand-mark { width: 26px; height: 26px; }
+      .desktop-nav, .nav-actions > .login-link { display: none; }
+      .nav-actions { gap: 10px; }
+      .menu-toggle { display: inline-flex; }
+      .nav-actions .button { min-height: 36px; padding: 7px 12px; font-size: 11px; }
+      .hero { padding-top: 51px; padding-bottom: 37px; }
+      .hero-grid { gap: 36px; }
+      .hero h1 { margin-top: 22px; font-size: clamp(38px, 7.7vw, 53px); letter-spacing: -.055em; line-height: 1.1; }
+      .hero-description { margin-top: 23px; font-size: 13px; line-height: 1.9; }
+      .hero-actions { margin-top: 25px; }
+      .hero-actions .button { font-size: 12px; padding-inline: 16px; }
+      .hero-note { font-size: 10px; }
+      .hero-copy .eyebrow { font-size: 8px; letter-spacing: .08em; }
+      .install-command { font-size: 11px; }
+      .report-topbar { padding: 11px 16px; font-size: 9px; }
+      .report-example { font-size: 8px; }
+      .report-summary { gap: 15px; padding: 22px 16px; }
+      .score-dial { flex-basis: 82px; width: 82px; height: 82px; }
+      .score-number strong { font-size: 32px; }
+      .score-number span { font-size: 8px; }
+      .score-label { gap: 6px; font-size: 7px; letter-spacing: .04em; }
+      .grade-pill { font-size: 8px; }
+      .report h2 { font-size: 15px; line-height: 1.6; }
+      .findings-heading { padding-inline: 16px; font-size: 8px; }
+      .finding { grid-template-columns: 59px 1fr; margin-inline: 16px; gap: 8px; padding-block: 14px; }
+      .finding p { font-size: 10px; line-height: 1.9; }
+      .severity { font-size: 7px; padding: 3px 5px; }
+      .report-footer { padding: 12px 16px; }
+      .report-footer .text-link, .report-footer > span { font-size: 9px; }
+      .use-cases { padding-top: 22px; padding-bottom: 29px; }
+      .use-case-label { font-size: 8px; margin-bottom: 17px; }
+      .use-case-list { gap: 12px 8px; font-size: 10px; }
+      .use-case-list li:not(:last-child)::after { margin-left: 8px; margin-right: 0; }
+      .section { padding-block: 62px; }
+      .section-title { font-size: 32px; }
+      .eyebrow { font-size: 9px; }
+      .section-heading { flex-direction: column; gap: 18px; margin-bottom: 30px; }
+      .section-heading > p { max-width: 420px; font-size: 13px; }
+      .step { grid-template-columns: 35px 1fr; gap: 13px 17px; padding-block: 25px; }
+      .step h3 { font-size: 16px; }
+      .step-instruction { font-size: 12px; }
+      .step-benefit { grid-column: 2; padding-top: 15px; padding-left: 0; border-left: 0; border-top: 1px solid var(--line); }
+      .step-benefit p { font-size: 11px; }
+      .feature-card { padding: 21px; }
+      .feature-grid { gap: 12px; }
+      .feature-top { margin-bottom: 20px; }
+      .feature-card > p { font-size: 11px; }
+      .feature-code { font-size: 9px; padding: 10px; }
+      .features-note { align-items: flex-start; font-size: 10px; }
+      .features-note .icon { margin-top: 1px; }
+      .cli-benefits { gap: 12px; font-size: 10px; }
+      .terminal-bar { gap: 10px; padding: 12px 14px; }
+      .terminal-title { font-size: 8px; }
+      .terminal-local { font-size: 7px; }
+      .terminal pre { padding: 22px 16px; font-size: 10px; line-height: 2.15; }
+      .enterprise-section { padding-top: 0; padding-bottom: 62px; }
+      .enterprise-card { grid-template-columns: 1fr; gap: 30px; padding: 26px 23px; }
+      .enterprise-copy .section-title { font-size: 31px; }
+      .enterprise-copy .section-copy { font-size: 13px; }
+      .enterprise-capabilities { font-size: 10px; gap: 12px; }
+      .vpc-diagram { padding: 17px; }
+      .vpc-heading { font-size: 8px; }
+      .vpc-flow { padding-block: 26px 22px; }
+      .vpc-node { font-size: 10px; }
+      .pricing-header { margin-bottom: 30px; }
+      .pricing-header .section-copy { font-size: 13px; }
+      .price-card { padding: 22px; }
+      .docs-grid { grid-template-columns: 1fr; gap: 13px; }
+      .doc-card pre { font-size: 10px; }
+      .faq-grid { grid-template-columns: 1fr; gap: 30px; }
+      .faq-intro .text-link { margin-top: 15px; }
+      .faq-list summary { font-size: 12px; padding-block: 21px; }
+      .faq-list details > p { padding-right: 20px; font-size: 11px; }
+      .final-cta { padding-block: 61px 66px; }
+      .final-cta .section-title { max-width: 420px; font-size: 37px; }
+      .final-cta p { max-width: 340px; margin-inline: auto; font-size: 12px; }
+      .footer-row { justify-content: center; gap: 22px; padding-block: 28px; }
+      .footer-brand { gap: 20px; }
+      .footer-links { gap: 23px; }
+    }
+    @media (max-width: 480px) {
+      .feature-grid, .pricing-grid { grid-template-columns: 1fr; }
+      .feature-card { padding: 24px; }
+      .feature-card > p { font-size: 12px; }
+      .feature-code { font-size: 10px; }
+      .feature-top { margin-bottom: 19px; }
+      .price-card { padding: 27px; }
+      .plan-heading h3 { font-size: 17px; }
+      .plan-for { font-size: 12px; }
+      .plan-features { min-height: 0; }
+      .plan-features li { font-size: 12px; }
+      .price-card .button { font-size: 12px; }
+      .price-note { min-height: 0; }
+      .popular-label { font-size: 9px; }
+      .hero h1 { font-size: clamp(36px, 9.6vw, 46px); }
+      .hero h1 .opening { margin-bottom: 10px; }
+      .hero-actions { gap: 8px; }
+      .hero-actions .button { gap: 6px; padding-inline: 12px; font-size: 11px; }
+      .report-summary { gap: 12px; }
+      .score-dial { flex-basis: 70px; width: 70px; height: 70px; }
+      .score-number strong { font-size: 28px; }
+      .report h2 { font-size: 13px; }
+      .score-label { margin-bottom: 6px; }
+      .score-label > span:first-child { font-size: 6px; }
+      .report-footer { gap: 8px; }
+      .report-footer > span { font-size: 8px; }
+      .report-footer .text-link { gap: 4px; font-size: 8px; }
+      .report-footer .text-link .icon { width: 12px; height: 12px; }
+      .cli-benefits { grid-template-columns: 1fr; font-size: 11px; }
+      .terminal-local { display: none; }
+      .terminal-title { text-align: right; }
+      .enterprise-card { padding: 25px 20px; }
+      .enterprise-capabilities { gap: 12px 10px; font-size: 9px; }
+      .vpc-heading { font-size: 7px; }
+      .footer-brand { width: 100%; justify-content: space-between; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition: none !important; }
+      .button:hover { transform: none; }
+    }
+  </style>
+</head>
+<body class="antialiased">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" style="position:absolute;overflow:hidden">
+    <defs>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.5 21 6v6c0 4.5-5 8-9 10-4-2-9-5.5-9-10V6l9-3.5Z"/><path d="m8 12 2.5 2.5L16 9"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4V8Z"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></symbol>
+      <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3"/></symbol>
+      <symbol id="i-split" viewBox="0 0 24 24"><path d="M5 3v4c0 3 3 5 7 5h7m-4-4 4 4-4 4M5 21v-4c0-3 3-5 7-5"/></symbol>
+      <symbol id="i-label" viewBox="0 0 24 24"><path d="M3 3h8l10 10-8 8L3 11V3Z"/><circle cx="7.5" cy="7.5" r="1"/><path d="m11 13 2 2 4-4"/></symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18M6 16l4-6 4 4 6-9M16 5h4v4"/></symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+      <symbol id="i-terminal" viewBox="0 0 24 24"><path d="m4 6 6 6-6 6m9 0h7"/></symbol>
+      <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 6-6 6 6 6m8-12 6 6-6 6M14 3l-4 18"/></symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></symbol>
+      <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/></symbol>
+      <symbol id="i-workflow" viewBox="0 0 24 24"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/><path d="M6 9v9h9M9 6h9v9"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    </defs>
+  </svg>
+
+  <header class="site-header">
+    <div class="page-shell">
+      <div class="nav-row">
+        <a class="brand" href="/" aria-label="Leakproof home"><svg class="icon brand-mark" aria-hidden="true"><use href="#i-shield"/></svg>Leakproof</a>
+        <nav class="desktop-nav" aria-label="Main navigation">
+          <a href="#how-it-works">How it works</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#docs">Docs</a>
+          <a href="#cli">CLI</a>
+        </nav>
+        <div class="nav-actions">
+          <a class="login-link" href="/login">Log in</a>
+          <a class="button button-primary" href="/signup">Start free <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <button class="menu-toggle" type="button" aria-label="Open navigation" aria-controls="mobile-menu" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+        </div>
+      </div>
+      <nav class="mobile-nav" id="mobile-menu" aria-label="Mobile navigation" hidden>
+        <a href="#how-it-works">How it works</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#docs">Docs</a>
+        <a href="#cli">CLI</a>
+        <a href="/login">Log in</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="page-shell hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span>Trust your data. Then your model.</p>
+          <h1 id="hero-title"><span class="opening">Your model will fail.</span> Leakproof tells you why, <span class="promise">before you train.</span></h1>
+          <p class="hero-description">Upload train.csv, name the target, and in 60 seconds get a 0–100 Leakproof Score with every leaked feature, contaminated split, wrong label and inflated CV score, each with the exact fix.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="/signup">Start free <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+            <a class="button" href="/demo"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>Try the live demo</a>
+          </div>
+          <p class="hero-note">3 free audits / month <span aria-hidden="true">·</span> Unlimited local CLI</p>
+          <div class="install-command">
+            <span class="prompt mono" aria-hidden="true">$</span>
+            <code id="install-command">pip install leakproof-audit</code>
+            <button class="copy-button" type="button" data-copy-target="install-command" aria-label="Copy installation command"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span class="copy-label">Copy</span></button>
+          </div>
+        </div>
+
+        <article class="report" aria-labelledby="report-headline" aria-describedby="report-caption">
+          <div class="report-topbar">
+            <span class="report-file"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>churn_dataset / audit</span>
+            <span class="report-example" id="report-caption">EXAMPLE REPORT</span>
+          </div>
+          <div class="report-summary">
+            <div class="score-dial" role="img" aria-label="Leakproof Score: 11 out of 100">
+              <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" fill="none" stroke="#2a382e" stroke-width="3"/><circle cx="50" cy="50" r="44" fill="none" stroke="#6ee7b7" stroke-width="3" stroke-linecap="round" stroke-dasharray="30.41 276.46"/></svg>
+              <div class="score-number" aria-hidden="true"><strong>11</strong><span>/ 100</span></div>
+            </div>
+            <div class="score-context">
+              <div class="score-label"><span>Leakproof Score</span><span class="grade-pill">Grade F</span></div>
+              <h2 id="report-headline">Your naive CV AUC 0.919 is not real; <span class="honest-score">honest estimate ≈ 0.681</span></h2>
+            </div>
+          </div>
+          <div class="findings-heading"><span>Ranked findings</span><span>Highest impact first</span></div>
+          <ol aria-label="Example audit findings">
+            <li class="finding"><span class="severity">CRITICAL</span><p><code>'cancellation_date'</code> looks like target leakage</p></li>
+            <li class="finding"><span class="severity">CRITICAL</span><p>40 test rows (2.35%) are exact copies of train rows</p></li>
+            <li class="finding"><span class="severity">CRITICAL</span><p>Random KFold is inflated by 0.061 AUC because rows share <code>'customer_id'</code></p></li>
+            <li class="finding"><span class="severity severity-medium">MEDIUM</span><p>Train and test are distinguishable (adversarial AUC 0.83)</p></li>
+          </ol>
+          <div class="report-footer">
+            <span><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>7 checks completed · 4 findings shown</span>
+            <a class="text-link" href="/demo">Explore the report<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="use-cases" aria-label="Who Leakproof is for">
+      <div class="page-shell">
+        <p class="use-case-label">For everyone who needs a score they can trust</p>
+        <ul class="use-case-list">
+          <li>Kaggle competitors</li><li>ML teams</li><li>Model-risk &amp; compliance</li><li>Bootcamps</li><li>Consultancies</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section how-section" id="how-it-works" aria-labelledby="how-title">
+      <div class="page-shell">
+        <div class="section-heading">
+          <div><p class="eyebrow">01 / How it works</p><h2 class="section-title" id="how-title">From dataset to reality check.</h2></div>
+          <p>Before the training run. Before the leaderboard drop. Before a broken model reaches production.</p>
+        </div>
+        <ol class="steps">
+          <li class="step">
+            <span class="step-number" aria-hidden="true">01</span>
+            <div><h3>Upload or run the CLI</h3><p class="step-instruction">Start with <code>train.csv</code>, add an optional <code>test.csv</code>, and name your target column.</p></div>
+            <div class="step-benefit"><h4>Leakage, found.</h4><p>Single-feature AUC, deterministic functions of the target, post-outcome columns like <code>paid_date</code>. Leakproof names the column, shows the evidence, and tells you to drop it.</p></div>
+          </li>
+          <li class="step">
+            <span class="step-number" aria-hidden="true">02</span>
+            <div><h3>7 checks in under a minute</h3><p class="step-instruction">Get a 0–100 score, a grade from A to F, and findings ranked by how much they matter.</p></div>
+            <div class="step-benefit"><h4>Clean splits, clean labels.</h4><p>Exact and near-duplicate rows across train and test, duplicates inside train, and the rows whose labels are probably wrong, listed by index so you can fix them today.</p></div>
+          </li>
+          <li class="step">
+            <span class="step-number" aria-hidden="true">03</span>
+            <div><h3>Fix plan with code</h3><p class="step-instruction">Claude turns the findings into a plain-English narrative and a fix plan with code you can use.</p></div>
+            <div class="step-benefit"><h4>Honest cross-validation.</h4><p>It discovers group and time structure in your data, reruns your CV the right way, and shows the gap: "random KFold overstates by 0.11 AUC; use GroupKFold on <code>user_id</code>." Code included.</p></div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section features-section" aria-labelledby="features-title">
+      <div class="page-shell">
+        <div class="section-heading">
+          <div><p class="eyebrow">02 / What we catch</p><h2 class="section-title" id="features-title">Six ways your dataset lies.</h2></div>
+          <p>Every finding comes with evidence and a way forward. Here are a few of the fixes.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card">
+            <div class="feature-top"><span class="feature-icon"><svg class="icon" aria-hidden="true"><use href="#i-target"/></svg></span><span class="feature-index">CHECK / 01</span></div>
+            <h3>Target leakage</h3><p>Find the features that reveal the answer, including columns that only exist after the outcome.</p>
+            <pre class="feature-code"><code>X = X.drop(columns=["cancellation_date"])</code></pre>
+          </article>
+          <article class="feature-card">
+            <div class="feature-top"><span class="feature-icon"><svg class="icon" aria-hidden="true"><use href="#i-split"/></svg></span><span class="feature-index">CHECK / 02</span></div>
+            <h3>Train/test contamination</h3><p>Surface exact and near-duplicate rows across train and test before they turn your holdout into a rehearsal.</p>
+            <pre class="feature-code"><code><span class="doc-comment"># Indices flagged by the audit</span>
+train = train.drop(index=overlap_indices)</code></pre>
+          </article>
+          <article class="feature-card">
+            <div class="feature-top"><span class="feature-icon"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></span><span class="feature-index">CHECK / 03</span></div>
+            <h3>Duplicates</h3><p>Catch repeated rows inside your training data that can land in different folds and inflate your validation score.</p>
+            <pre class="feature-code"><code><span class="doc-comment"># Remove before creating folds</span>
+train = train.drop_duplicates()</code></pre>
+          </article>
+          <article class="feature-card">
+            <div class="feature-top"><span class="feature-icon"><svg class="icon" aria-hidden="true"><use href="#i-label"/></svg></span><span class="feature-index">CHECK / 04</span></div>
+            <h3>Label noise</h3><p>Get the row indices of likely wrong labels so you can review the evidence and correct the source.</p>
+            <pre class="feature-code"><code><span class="doc-comment"># Review before changing labels</span>
+train.loc[suspect_indices].to_csv("review.csv")</code></pre>
+          </article>
+          <article class="feature-card">
+            <div class="feature-top"><span class="feature-icon"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg></span><span class="feature-index">CHECK / 05</span></div>
+            <h3>Distribution shift</h3><p>Use adversarial validation to find train/test shift and identify where representative data or reweighting is needed.</p>
+            <pre class="feature-code"><code><span class="doc-comment"># After reviewing covariate shift</span>
+model.fit(X, y, sample_weight=shift_weights)</code></pre>
+          </article>
+          <article class="feature-card">
+            <div class="feature-top"><span class="feature-icon"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg></span><span class="feature-index">CHECK / 06</span></div>
+            <h3>Wrong cross-validation</h3><p>Discover group or time structure, choose the right split, and see an honest CV estimate alongside the inflated score.</p>
+            <pre class="feature-code"><code>from sklearn.model_selection import GroupKFold
+cv = GroupKFold(5).split(X, y, groups=customer_id)</code></pre>
+          </article>
+        </div>
+        <p class="features-note"><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg>Illustrative fixes above. Your report names your columns, rows, and next steps.</p>
+      </div>
+    </section>
+
+    <section class="section" id="cli" aria-labelledby="cli-title">
+      <div class="page-shell cli-grid">
+        <div class="cli-copy">
+          <p class="eyebrow">03 / Built for your workflow</p>
+          <h2 class="section-title" id="cli-title">Local by default.<br>Ready for your pipeline.</h2>
+          <p class="section-copy">Audit without an upload. Add a score threshold to CI. Stop a bad dataset before it becomes a bad model.</p>
+          <ul class="cli-benefits">
+            <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Unlimited local CLI audits</li>
+            <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>A quality gate for your data</li>
+          </ul>
+        </div>
+        <div class="terminal" aria-label="Leakproof CLI example">
+          <div class="terminal-bar"><span class="terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="terminal-title">leakproof — local audit</span><span class="terminal-local">YOUR MACHINE</span></div>
+          <pre><code><span class="prompt">$</span> pip install leakproof-audit
+<span class="prompt">$</span> leakproof audit train.csv --test test.csv --target churned
+
+<span class="output">Leakproof score <span class="terminal-warning">11/100 (F)</span>  ·  4 critical  ·  3 medium</span>
+<span class="terminal-warning">CRITICAL</span>  'cancellation_date' looks like target leakage
+<span class="comment">...</span>
+
+<span class="prompt">$</span> leakproof gate train.csv --target churned --min-score 80   <span class="comment"># exits 1 -&gt; fails CI</span></code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="lint" aria-labelledby="lint-title">
+      <div class="page-shell cli-grid">
+        <div class="cli-copy">
+          <p class="eyebrow">04 / Check the code too</p>
+          <h2 class="section-title" id="lint-title">Clean data.<br>Leaky code.</h2>
+          <p class="section-copy">A scaler fitted on train + test, missing values filled with test means, a vocabulary built from every row.
+            <code>leakproof lint</code> follows each value from train.csv and test.csv through your script or notebook and tells you
+            which fit sees test rows, on which line, and how to fix it. Nothing runs and nothing is uploaded.</p>
+          <ul class="cli-benefits">
+            <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Scripts and Jupyter notebooks (cell + line)</li>
+            <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Exit code 1 in CI when a fit sees test rows</li>
+          </ul>
+        </div>
+        <div class="terminal" aria-label="Leakproof lint example">
+          <div class="terminal-bar"><span class="terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="terminal-title">leakproof — code check</span><span class="terminal-local">YOUR MACHINE</span></div>
+          <pre><code><span class="prompt">$</span> leakproof lint train.py
+
+<span class="terminal-warning">ERROR</span>  line 13  .fit() sees TRAIN+TEST rows (joined at line 12)
+<span class="terminal-warning">ERROR</span>  line 15  fillna(&lt;statistic&gt;) sees TEST rows
+<span class="output">WARN</span>   line 19  KFold(shuffle=True) without random_state
+
+<span class="comment">fits and the rows they see:</span>
+<span class="output">  line 13  StandardScaler().fit(full)      -&gt; TRAIN+TEST</span>
+<span class="output">  line 17  PCA(n_components=8).fit(X)      -&gt; train rows only</span></code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="enterprise-section" aria-labelledby="enterprise-title">
+      <div class="page-shell">
+        <div class="enterprise-card">
+          <div class="enterprise-copy">
+            <p class="eyebrow"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>Leakproof for Enterprise</p>
+            <h2 class="section-title" id="enterprise-title">Your data stays<br>inside your walls.</h2>
+            <p class="section-copy">Deploy on-prem Docker in your VPC. Your data never leaves your environment. Give model-risk and compliance teams Model Validation Evidence exports to support SR 11-7 and EU AI Act review workflows.</p>
+            <a class="button" href="mailto:hello@leakproof.dev">Talk to us <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          </div>
+          <div>
+            <div class="vpc-diagram" role="img" aria-label="Dataset, Leakproof audit, and validation evidence all remain within your VPC">
+              <div class="vpc-heading"><span><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>YOUR VPC</span><span>ON-PREM DOCKER</span></div>
+              <div class="vpc-flow">
+                <div class="vpc-node"><svg class="icon" aria-hidden="true"><use href="#i-database"/></svg><span>Your dataset</span></div>
+                <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>
+                <div class="vpc-node active"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><span>Leakproof</span></div>
+                <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>
+                <div class="vpc-node"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg><span>Your evidence</span></div>
+              </div>
+              <p class="evidence-note"><strong>Model Validation Evidence</strong>SR 11-7 / EU AI Act review workflows</p>
+            </div>
+            <ul class="enterprise-capabilities">
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>On-prem Docker</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>REST API access</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>CI gate</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Validation evidence</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Single sign-on (SSO)</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Audit log</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section pricing-section" id="pricing" aria-labelledby="pricing-title">
+      <div class="page-shell">
+        <div class="pricing-header"><p class="eyebrow">04 / Simple pricing</p><h2 class="section-title" id="pricing-title">Start with a better baseline.</h2><p class="section-copy">From your first dataset to your team's production pipeline.</p></div>
+        <div class="pricing-grid">
+          <article class="price-card" aria-labelledby="plan-free">
+            <div class="plan-heading"><h3 id="plan-free">Free</h3></div>
+            <p class="plan-for">For the first reality check.</p>
+            <p class="price">$0<span>/mo</span></p>
+            <p class="price-note">Free to get started</p>
+            <ul class="plan-features">
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>3 audits/month</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Files up to 20 MB</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Unlimited local CLI</li>
+            </ul>
+            <a class="button" href="/signup">Start free <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          </article>
+          <article class="price-card popular" aria-labelledby="plan-pro">
+            <div class="plan-heading"><h3 id="plan-pro">Pro</h3><span class="popular-label">Most popular</span></div>
+            <p class="plan-for">For the next serious model.</p>
+            <p class="price">$29<span>/mo</span></p>
+            <p class="price-note">or $290/yr</p>
+            <ul class="plan-features">
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Unlimited audits</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>500 MB files</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>AI narrative</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Shareable links</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>PDF export</li>
+            </ul>
+            <a class="button button-primary" href="/signup">Choose Pro <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          </article>
+          <article class="price-card" aria-labelledby="plan-team">
+            <div class="plan-heading"><h3 id="plan-team">Team</h3></div>
+            <p class="plan-for">For a shared standard of quality.</p>
+            <p class="price">$99<span>/mo</span></p>
+            <p class="price-note">5 seats included</p>
+            <ul class="plan-features">
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>5 seats</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>API access</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>CI gate</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Private workspace</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Priority support</li>
+            </ul>
+            <a class="button" href="/signup">Choose Team <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          </article>
+          <article class="price-card" aria-labelledby="plan-enterprise">
+            <div class="plan-heading"><h3 id="plan-enterprise">Enterprise</h3></div>
+            <p class="plan-for">For your infrastructure and controls.</p>
+            <p class="price custom">Custom</p>
+            <p class="price-note">Built around your organization</p>
+            <ul class="plan-features">
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>On-prem / VPC Docker</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>SSO</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Validation-evidence exports</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Audit log</li>
+            </ul>
+            <a class="button" href="mailto:hello@leakproof.dev">Talk to us <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          </article>
+        </div>
+        <p class="pricing-footnote">The local CLI is free and unlimited. Hosted limits depend on your plan.</p>
+      </div>
+    </section>
+
+    <section class="section docs-section" id="docs" aria-labelledby="docs-title">
+      <div class="page-shell">
+        <div class="section-heading"><div><p class="eyebrow">05 / Quickstart docs</p><h2 class="section-title" id="docs-title">Meet your stack where it is.</h2></div><p>From a notebook to a pull request, an honest dataset audit is a few lines away.</p></div>
+        <div class="docs-grid">
+          <article class="doc-card">
+            <div class="doc-header"><h3><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg>Python API</h3><button class="copy-button" type="button" data-copy-target="docs-python" aria-label="Copy Python API example"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span class="copy-label">Copy</span></button></div>
+            <pre><code id="docs-python">from leakproof import audit, AuditConfig
+report = audit(train, test, AuditConfig(target="y"))</code></pre>
+          </article>
+          <article class="doc-card">
+            <div class="doc-header"><h3><svg class="icon" aria-hidden="true"><use href="#i-terminal"/></svg>CLI</h3><button class="copy-button" type="button" data-copy-target="docs-cli" aria-label="Copy CLI example"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span class="copy-label">Copy</span></button></div>
+            <pre><code id="docs-cli">pip install leakproof-audit
+leakproof audit train.csv --test test.csv --target y</code></pre>
+          </article>
+          <article class="doc-card">
+            <div class="doc-header"><h3><svg class="icon" aria-hidden="true"><use href="#i-globe"/></svg>REST API</h3><button class="copy-button" type="button" data-copy-target="docs-rest" aria-label="Copy REST API example"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span class="copy-label">Copy</span></button></div>
+            <pre><code id="docs-rest">curl -F train=@train.csv -F target=y -H "Authorization: Bearer $KEY" https://leakproof.dev/api/v1/audits</code></pre>
+          </article>
+          <article class="doc-card">
+            <div class="doc-header"><h3><svg class="icon" aria-hidden="true"><use href="#i-workflow"/></svg>GitHub Action</h3><button class="copy-button" type="button" data-copy-target="docs-action" aria-label="Copy GitHub Action steps"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span class="copy-label">Copy</span></button></div>
+            <pre><code id="docs-action"><span class="doc-comment"># Add to an existing job with your data checked out</span>
+steps:
+  - run: pip install leakproof-audit
+  - run: leakproof gate data/train.csv --target y --min-score 80</code></pre>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="faq-title">
+      <div class="page-shell faq-grid">
+        <div class="faq-intro"><p class="eyebrow">06 / A few good questions</p><h2 class="section-title" id="faq-title">Before you run it.</h2><p class="section-copy">The details behind the reality check.</p><a class="text-link" href="mailto:hello@leakproof.dev">Get in touch <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></div>
+        <div class="faq-list">
+          <details open><summary>What does the Leakproof Score measure?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><p>The 0–100 score and A–F grade summarize the dataset issues found by the audit. A low score signals problems to investigate before training. The ranked findings explain the evidence, affected columns or rows, and suggested fixes behind the score.</p></details>
+          <details><summary>Do I need a test file or a trained model?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><p>No. Start with a tabular <code>train.csv</code> and the name of your target column. Add an optional <code>test.csv</code> to check train/test contamination and distribution shift. You can run the audit before training your model.</p></details>
+          <details><summary>Does my data leave my machine?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><p>The free local CLI runs on your machine without uploading your dataset. Hosted audits use the files you upload. Enterprise lets you deploy Leakproof with on-prem Docker in your VPC, where your data stays inside your environment.</p></details>
+          <details><summary>What does the AI narrative add?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><p>Claude explains the audit findings in plain English and writes a fix plan with code, helping you understand what to tackle first and why. Pro includes the AI narrative, shareable report links, and PDF export.</p></details>
+          <details><summary>Can I use Leakproof in CI or through an API?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><p>Yes. Team includes API access and the CI gate. Use <code>leakproof gate train.csv --target y --min-score 80</code> to fail the build when a dataset scores below your threshold, or integrate audits through the REST API.</p></details>
+          <details><summary>What is the Model Validation Evidence export?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><p>It's an Enterprise export for model-risk and compliance teams that need dataset audit evidence for their review process, including SR 11-7 and EU AI Act workflows. It supports your team's validation review; it does not certify a model's compliance.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="final-cta" aria-labelledby="final-title">
+      <div class="page-shell">
+        <p class="eyebrow">Before your next .fit()</p>
+        <h2 class="section-title" id="final-title">Build on data you can trust.</h2>
+        <p>Find the problem while it's still a dataset.</p>
+        <a class="button button-primary" href="/signup">Audit a dataset free <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <p class="final-cli">Or start locally: <a href="#cli"><code>pip install leakproof-audit</code></a></p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="page-shell footer-row">
+      <div class="footer-brand"><a class="brand" href="/" aria-label="Leakproof home"><svg class="icon brand-mark" aria-hidden="true"><use href="#i-shield"/></svg>Leakproof</a><p class="copyright">© 2026 Leakproof</p></div>
+      <nav class="footer-links" aria-label="Footer navigation"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/login">Log in</a></nav>
+    </div>
+  </footer>
+  <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
+  <script>
+    (() => {
+      const menuButton = document.querySelector('.menu-toggle');
+      const menu = document.getElementById('mobile-menu');
+      const setMenu = (open) => {
+        menu.hidden = !open;
+        menuButton.setAttribute('aria-expanded', String(open));
+        menuButton.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+      };
+      menuButton.addEventListener('click', () => setMenu(menu.hidden));
+      menu.addEventListener('click', (event) => {
+        if (event.target.closest('a')) setMenu(false);
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !menu.hidden) {
+          setMenu(false);
+          menuButton.focus();
+        }
+      });
+      const desktop = window.matchMedia('(min-width: 701px)');
+      desktop.addEventListener('change', (event) => {
+        if (event.matches) setMenu(false);
+      });
+      const copyStatus = document.getElementById('copy-status');
+      document.querySelectorAll('[data-copy-target]').forEach((button) => {
+        let resetTimer;
+        button.addEventListener('click', async () => {
+          const source = document.getElementById(button.dataset.copyTarget);
+          const text = source.textContent.trim();
+          const label = button.querySelector('.copy-label');
+          clearTimeout(resetTimer);
+          try {
+            await navigator.clipboard.writeText(text);
+            label.textContent = 'Copied';
+            copyStatus.textContent = 'Code copied to clipboard.';
+          } catch {
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(source);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            label.textContent = 'Selected';
+            copyStatus.textContent = 'Code selected. Use your device’s copy command to copy it.';
+          }
+          resetTimer = setTimeout(() => { label.textContent = 'Copy'; }, 2200);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

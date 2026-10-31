@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ audit.name }} · Leakproof report{% endblock %}
+{% block head %}<meta name="robots" content="noindex"><meta property="og:title" content="Leakproof score {{ audit.score }}/100 ({{ audit.grade }}) · {{ audit.name }}"><meta property="og:description" content="{{ audit.headline }}">{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <div class="text-xs text-zinc-500">Shared Leakproof report</div>
+    <h1 class="text-xl font-semibold text-zinc-50">{{ audit.name }}</h1>
+    <div class="text-xs text-zinc-500">target <span class="font-mono text-zinc-300">{{ audit.target }}</span> · {{ audit.created_at.strftime('%b %d, %Y') }}</div>
+  </div>
+  {% if not user %}<a href="/signup" class="btn btn-primary">Audit your own dataset, free</a>{% endif %}
+</div>
+{% include "report_body.html" %}
+{% endblock %}

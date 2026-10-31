@@ -1,0 +1,15 @@
+# Example CI gate for customers: fail the build if training data has leakage.
+name: leakproof gate
+on: [push, pull_request]
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install leakproof-audit
+      - run: leakproof gate data/train.csv --test data/test.csv --target y --min-score 80 --fail-on critical --html leakproof-report.html
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: leakproof-report, path: leakproof-report.html }

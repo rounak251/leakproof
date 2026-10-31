@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Create your account' if mode == 'signup' else 'Log in' }} · Leakproof{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-md">
+  <h1 class="text-2xl font-semibold text-zinc-50">{{ 'Start auditing for free' if mode == 'signup' else 'Welcome back' }}</h1>
+  <p class="mt-1 text-sm text-zinc-400">{{ '3 audits a month, no card needed. Your first one can be the planted-leak demo.' if mode == 'signup' else 'Log in to your audits.' }}</p>
+  {% if error %}<div class="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">{{ error }}</div>{% endif %}
+  <form method="post" class="mt-6 space-y-4">
+    <input type="hidden" name="next" value="{{ request.query_params.get('next', '/app') }}">
+    <label class="block text-sm"><span class="text-zinc-400">Email</span><input class="input mt-1" type="email" name="email" required autocomplete="email"></label>
+    <label class="block text-sm"><span class="text-zinc-400">Password</span><input class="input mt-1" type="password" name="password" required minlength="8" autocomplete="{{ 'new-password' if mode == 'signup' else 'current-password' }}"></label>
+    <button class="btn btn-primary w-full justify-center" type="submit">{{ 'Create account' if mode == 'signup' else 'Log in' }}</button>
+  </form>
+  <p class="mt-4 text-sm text-zinc-500">
+    {% if mode == 'signup' %}Already have an account? <a class="text-emerald-300" href="/login">Log in</a>{% else %}New here? <a class="text-emerald-300" href="/signup">Create an account</a>{% endif %}
+  </p>
+</div>
+{% endblock %}
