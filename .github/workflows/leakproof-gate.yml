@@ -1,6 +1,7 @@
 # Example CI gate for customers: fail the build if training data has leakage.
 name: leakproof gate
-on: [push, pull_request]
+# In your own repo, use: on: [push, pull_request]. Here it is manual-only because data/ is not committed.
+on: workflow_dispatch
 jobs:
   audit:
     runs-on: ubuntu-latest
